@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {calculate, scenarios} from './model.mjs';
+const base={price:75,cost:43,orders:20,setup:640,days:7};
+test('reference example and seven-day totals',()=>{assert.deepEqual(calculate(base),{margin:32,daily:640,revenue:10500,variable:6020,total:4480,afterSetup:3840,recoveryOrders:20,recoveryDays:1});});
+test('one-day scenarios share the same horizon',()=>{assert.deepEqual(scenarios({...base,days:1},50).map(r=>r.afterSetup),[-320,0,320]);});
+test('seven-day scenarios and recovery',()=>{const rows=scenarios(base,50);assert.deepEqual(rows.map(r=>r.afterSetup),[1600,3840,6080]);assert.deepEqual(rows.map(r=>r.recoveryDays),[2,1,2/3]);});
+test('zero orders cannot recover a positive setup',()=>{const r=calculate({...base,orders:0});assert.equal(r.recoveryDays,null);assert.equal(r.afterSetup,-640);});
+test('zero and negative margins cannot recover positive setup',()=>{for(const cost of [75,80]){const r=calculate({...base,cost});assert.equal(r.recoveryDays,null);assert.equal(r.recoveryOrders,null);}});
+test('zero setup is already recovered even with no sales',()=>{const r=calculate({...base,setup:0,orders:0});assert.equal(r.recoveryDays,0);assert.equal(r.recoveryOrders,0);});
+test('whole orders round upward for recovery',()=>{assert.equal(calculate({...base,setup:641}).recoveryOrders,21);});
+test('currency subtraction does not add a spurious recovery order',()=>{const r=calculate({...base,price:.3,cost:.2,setup:.3});assert.equal(r.margin,.1);assert.equal(r.recoveryOrders,3);});
+test('scenario rounding and boundaries',()=>{assert.deepEqual(scenarios({...base,orders:3},50).map(r=>r.orders),[2,3,5]);assert.deepEqual(scenarios(base,0).map(r=>r.orders),[20,20,20]);assert.deepEqual(scenarios(base,100).map(r=>r.orders),[0,20,40]);});
+test('reject invalid inputs',()=>{for(const override of [{orders:-1},{price:NaN},{cost:Infinity},{orders:1.2},{days:0},{setup:-1}])assert.throws(()=>calculate({...base,...override}),RangeError);assert.throws(()=>scenarios(base,101),RangeError);});

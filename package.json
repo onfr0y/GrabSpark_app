@@ -1,0 +1,1 @@
+{"name":"menu-lab-business-simulation","private":true,"type":"module","scripts":{"test":"node --test model.test.mjs","start":"python3 -m http.server 8765 --bind 127.0.0.1"}}
